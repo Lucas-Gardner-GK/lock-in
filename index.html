@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Lock In</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Lock In">
+<meta name="theme-color" content="#0C1320">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF0F4;--surface:#FFFFFF;--raise:#F5F7FA;--line:#D6DCE5;--text:#0D1420;--muted:#5A6678;
+  --brass:#946409;--brass-ink:#FFFFFF;--brass-soft:#F4E8CC;--red:#BE332C;--red-soft:#FBE4E2;--dial-off:#D6DCE5;--dial-core:#9AA5B6;
+  --font:'Schibsted Grotesk',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  color-scheme:light;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0C1320;--surface:#141D2D;--raise:#1A2537;--line:#27344A;--text:#EDF0F4;--muted:#8D9AAF;
+    --brass:#E2B04E;--brass-ink:#1B1303;--brass-soft:#352A12;--red:#F0665E;--red-soft:#3A1917;--dial-off:#27344A;--dial-core:#5C6B84;
+    color-scheme:dark;
+  }
+}
+*,*::before,*::after{box-sizing:border-box}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:var(--font);font-size:16px;line-height:1.4;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:#0C1320}
+button,input,textarea{font:inherit;color:inherit}
+button{background:none;border:0;padding:0;cursor:pointer;text-align:left}
+:focus-visible{outline:2px solid var(--brass);outline-offset:2px;border-radius:6px}
+.app{max-width:480px;margin:0 auto;padding-bottom:92px}
+
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:9;background:var(--bg);padding:14px 20px 0}
+.bar{display:flex;align-items:center;justify-content:space-between}
+.mark{font-weight:800;font-size:21px;letter-spacing:-.02em}
+.purse{display:flex;align-items:center;gap:7px;font-weight:700;font-size:17px;font-variant-numeric:tabular-nums;padding:6px 12px 6px 9px;border-radius:99px;background:var(--surface);border:1px solid var(--line)}
+.coin{width:14px;height:14px;border-radius:50%;background:var(--brass);box-shadow:inset 0 0 0 2.5px var(--brass),inset 0 0 0 4px var(--brass-soft);flex:none}
+.strip{display:flex;gap:2px;overflow-x:auto;scroll-snap-type:x mandatory;margin:12px -8px 0;padding:0 4px 10px;scrollbar-width:none;border-bottom:1px solid var(--line)}
+.strip::-webkit-scrollbar{display:none}
+.d{flex:0 0 calc(100%/7 - 2px);scroll-snap-align:start;display:flex;flex-direction:column;align-items:center;gap:1px;padding:6px 0 7px;border-radius:12px;color:var(--muted);min-height:58px}
+.d span{font-size:12.5px;font-weight:500}
+.d b{font-size:18px;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+.d i{width:5px;height:5px;border-radius:50%;margin-top:2px}
+.d.shift i{background:var(--muted)}
+.d.now span{color:var(--brass);font-weight:700}
+.d.lck b{color:var(--brass)}
+.d.bad b{color:var(--red)}
+.d.sel{background:var(--text);color:var(--bg)}
+.d.sel b,.d.sel span{color:var(--bg)}
+.d.sel.shift i{background:var(--bg)}
+
+main{padding:18px 20px 0}
+h1{font-size:25px;font-weight:800;letter-spacing:-.025em;margin:0;line-height:1.15}
+.sum{color:var(--muted);margin:4px 0 0;font-size:15px}
+.alert{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center;padding:12px 14px;border-radius:14px;margin-bottom:12px;font-size:14.5px;font-weight:500;background:var(--red-soft);color:var(--red);border:1px solid var(--red)}
+.alert.info{background:var(--brass-soft);color:var(--text);border-color:var(--brass)}
+
+.hero{display:grid;grid-template-columns:132px 1fr;gap:18px;align-items:center;margin:20px 0 22px}
+.dial{width:132px;height:132px;display:block}
+.seg{fill:none;stroke-width:9;stroke:var(--dial-off);transition:stroke .3s}
+.seg.core{stroke:var(--dial-core)}
+.seg.on{stroke:var(--brass)}
+.seg.miss{stroke:var(--red)}
+.shackle{fill:none;stroke:var(--text);stroke-width:5;stroke-linecap:round;transform:translateY(-7px);transition:transform .4s cubic-bezier(.3,1.7,.5,1),stroke .3s}
+.lbody{fill:var(--text);transition:fill .3s}
+.hole{fill:var(--bg)}
+.dial.locked .shackle{transform:none;stroke:var(--brass)}
+.dial.locked .lbody{fill:var(--brass)}
+.dial.snap{animation:snap .5s ease-out}
+@keyframes snap{0%{transform:scale(1)}35%{transform:scale(1.07)}100%{transform:scale(1)}}
+.hero h2{font-size:20px;font-weight:700;margin:0;letter-spacing:-.015em}
+.hero p{margin:4px 0 0;font-size:15px;color:var(--muted)}
+.hero .today{color:var(--text);font-weight:600;font-variant-numeric:tabular-nums;margin-top:10px}
+
+.ask{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:14px 16px;margin-bottom:12px}
+.ask p{margin:0 0 10px;font-weight:600}
+.ask div{display:flex;gap:8px}
+.frog{display:grid;grid-template-columns:1fr auto;gap:4px 12px;width:100%;padding:15px 16px;border-radius:16px;background:var(--surface);border:1.5px solid var(--brass);margin-bottom:8px}
+.frog small{grid-column:1/-1;font-size:13px;font-weight:600;color:var(--brass)}
+.frog .ti{font-size:18px;font-weight:700;letter-spacing:-.01em}
+.frog .su{grid-column:1;font-size:14px;color:var(--muted)}
+.frog .c{grid-row:2/4;grid-column:2;align-self:center}
+.frog.done,.frog.dim{border-color:var(--line)}
+.frog.done .ti{color:var(--muted)}
+.frog.miss{border-color:var(--red)}
+.frog.miss small{color:var(--red)}
+
+h3.grp{font-size:14px;font-weight:600;color:var(--muted);margin:22px 0 2px}
+.row{display:grid;grid-template-columns:46px 1fr auto 26px;gap:10px;align-items:center;width:100%;padding:13px 0;border-bottom:1px solid var(--line);min-height:60px}
+.row .t{font-size:13.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.ti{font-weight:600;font-size:16.5px;display:block}
+.su{font-size:13.5px;color:var(--muted);display:block;margin-top:1px}
+.lk{width:11px;height:11px;margin-right:6px;color:var(--brass);vertical-align:-1px}
+.c{font-weight:700;font-size:15px;font-variant-numeric:tabular-nums;color:var(--brass);white-space:nowrap}
+.ck{width:26px;height:26px;border-radius:50%;border:2px solid var(--dial-core);display:grid;place-items:center}
+.done .ck{background:var(--brass);border-color:var(--brass)}
+.done .ck::after{content:"";width:10px;height:5px;border:2.5px solid var(--brass-ink);border-top:0;border-right:0;transform:rotate(-45deg) translate(1px,-1px)}
+.row.done .ti{color:var(--muted)}
+.miss .ck{border-color:var(--red)}
+.miss .ck::after{content:"";width:10px;height:2.5px;background:var(--red);border-radius:2px}
+.miss .c{color:var(--red)}
+.dim .ck{border-style:dashed;border-color:var(--dial-off)}
+.dim .c{color:var(--muted)}
+.note{margin:26px 0 0;padding-top:16px;border-top:1px solid var(--line);font-size:15.5px;line-height:1.5}
+
+.lead{color:var(--muted);margin:6px 0 18px;font-size:15px}
+.item{display:grid;grid-template-columns:1fr auto;gap:2px 12px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
+.item .su{grid-column:1}
+.item .act{grid-row:1/3;grid-column:2}
+.btn{display:block;width:100%;text-align:center;font-weight:700;font-size:16.5px;padding:15px 18px;border-radius:14px;background:var(--brass);color:var(--brass-ink);min-height:52px}
+.btn.sm{width:auto;font-size:14.5px;padding:9px 14px;min-height:40px;border-radius:11px}
+.btn.ghost{background:none;color:var(--text);border:1.5px solid var(--line)}
+.btn[disabled]{background:var(--raise);color:var(--muted);cursor:default}
+.box{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+.box h3{margin:0 0 4px;font-size:17px;font-weight:700}
+.box p{margin:4px 0 0}
+.box .btn{margin-top:12px}
+.meter{height:8px;border-radius:99px;background:var(--dial-off);overflow:hidden;margin:10px 0 6px}
+.meter i{display:block;height:100%;background:var(--brass);border-radius:99px;transition:width .4s}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.chip{padding:10px 13px;border-radius:11px;border:1.5px solid var(--line);font-weight:600;font-size:14.5px;font-variant-numeric:tabular-nums;min-height:42px}
+.chip:active{background:var(--brass-soft);border-color:var(--brass)}
+.step{display:flex;align-items:center;gap:10px}
+.step button{width:38px;height:38px;border-radius:10px;border:1.5px solid var(--line);text-align:center;font-weight:700;font-size:18px}
+.step b{min-width:64px;text-align:center;font-variant-numeric:tabular-nums}
+ul.rules,ol.rules{margin:8px 0 0;padding-left:20px;font-size:15px}
+.rules li{margin:6px 0}
+.push{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:11px 12px;border-radius:14px;background:var(--raise);margin-top:8px}
+.push b{font-size:14.5px}
+.push time{font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+.push p{grid-column:1/3;margin:0;font-size:14px;color:var(--muted)}
+.bad-text{color:var(--red);font-weight:600}
+label{display:block;font-weight:600;font-size:14.5px;margin-top:14px}
+input,textarea{display:block;width:100%;margin-top:6px;padding:12px 13px;border-radius:12px;border:1.5px solid var(--line);background:var(--bg);font-size:16px}
+textarea{resize:none}
+input:focus,textarea:focus{outline:0;border-color:var(--brass)}
+
+nav{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav div{max-width:480px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr)}
+nav button{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 8px;font-size:12px;font-weight:600;color:var(--muted);min-height:56px}
+nav svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav button[aria-current="page"]{color:var(--brass)}
+
+.scrim{position:fixed;inset:0;background:rgba(5,9,16,.55);opacity:0;pointer-events:none;transition:opacity .2s;z-index:25}
+.sheet{position:fixed;left:0;right:0;bottom:0;max-width:480px;margin:0 auto;z-index:30;background:var(--surface);border-radius:22px 22px 0 0;padding:22px 20px calc(20px + env(safe-area-inset-bottom,0px));transform:translateY(105%);visibility:hidden;transition:transform .28s cubic-bezier(.2,.8,.2,1),visibility 0s .28s}
+.open .scrim{opacity:1;pointer-events:auto}
+.open .sheet{transform:none;visibility:visible;transition-delay:0s}
+.sheet h2{margin:0;font-size:21px;font-weight:800;letter-spacing:-.02em}
+.sheet .su{font-size:15px;margin:4px 0 0}
+.sheet .btn{margin-top:18px}
+.err{color:var(--red);font-size:14px;margin:8px 0 0;min-height:1px}
+.said{margin:14px 0 0;padding:12px 14px;border-radius:12px;background:var(--raise);font-size:15px}
+.toast{position:fixed;left:50%;bottom:calc(74px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--text);color:var(--bg);font-weight:600;font-size:14.5px;padding:11px 16px;border-radius:99px;opacity:0;pointer-events:none;transition:.25s;z-index:40;text-align:center;max-width:92vw}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.setup header .strip,.setup nav{display:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <div class="bar"><span class="mark">Lock In</span><span class="purse" aria-label="Coins"><i class="coin"></i><span id="purse">0</span></span></div>
+    <div class="strip" id="strip"></div>
+  </header>
+  <main id="view"></main>
+</div>
+<nav><div id="tabs"></div></nav>
+<div class="scrim" id="scrim"></div>
+<div class="sheet" id="sheet" role="dialog" aria-modal="true"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const API='https://qoadmpwqeaxfedvorusy.supabase.co/functions/v1/lockin-api';
+const VAPID='BNbyLI7TujAhL1KWbiCKxFpj9TAu7PxfvDKroTg5QsY0PD-yrRHVbH9CgRrchUaiPrd3FdSgPN8aPJaYUFqXHNo';
+const LSK='lockin-state',UIDK='lockin-uid',ROLL=3*36e5;
+
+const $=s=>document.querySelector(s);
+const pad=n=>String(n).padStart(2,'0');
+const key=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parse=k=>{const p=k.split('-');return new Date(+p[0],p[1]-1,+p[2])};
+const mins=s=>{const p=s.split(':');return p[0]*60+ +p[1]};
+const hm=m=>pad(Math.floor(m/60)%24)+'.'+pad(m%60);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const addDays=(d,n)=>{const x=new Date(d);x.setDate(x.getDate()+n);return x};
+const today=()=>{const d=new Date(Date.now()-ROLL);d.setHours(0,0,0,0);return d};
+const nowMin=()=>Math.floor((Date.now()-today().getTime())/6e4);
+const DAYS=['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'];
+const DS=['sø','ma','ti','on','to','fr','lø'];
+const MON=['januar','februar','mars','april','mai','juni','juli','august','september','oktober','november','desember'];
+const cap=s=>s[0].toUpperCase()+s.slice(1);
+const long=d=>DAYS[d.getDay()]+' '+d.getDate()+'. '+MON[d.getMonth()];
+const clock=iso=>{const d=new Date(iso),t=pad(d.getHours())+'.'+pad(d.getMinutes());return key(d)==key(new Date())?'kl. '+t:DAYS[d.getDay()]+' kl. '+t};
+
+const PRESETS=[['07:00','15:00'],['08:00','15:00'],['09:00','15:00'],['10:00','15:00'],['11:00','19:00'],['12:00','20:00'],['15:00','20:00'],['15:00','23:00']];
+const REWARDS=[
+  ['drink','Noe godt å drikke','Én valgfri drikke',120,'day'],
+  ['phone','30 min ekstra på telefonen','Grensa for sosiale medier øker i dag',150,'day'],
+  ['walk','Tur-fri dag','Turen i dag faller bort. Maks én gang i uka.',200,'week'],
+  ['calm','Rolig kveld','Kveldsloggen faller bort i dag',300,'day'],
+  ['pass','Fripass','Redder streaken én dag du ryker',350,null],
+  ['junk','Ett usunt kjøp','Småkjøp-regelen faller bort i dag. Maks én gang i uka.',400,'week'],
+  ['out','Mat ute med kompiser','Du har tjent den',800,null],
+  ['gear','Noe nytt til deg selv','Plagg eller utstyr, opptil 500 kr',1500,null]
+];
+const LEVELS=[[0,'Rekrutt'],[500,'Disiplinert'],[1500,'Låst inn'],[4000,'Maskin'],[10000,'Urørlig']];
+const FACTS=[
+  'James Dyson bygde 5 127 prototyper på fem år før støvsugeren virket. Hva er ditt neste forsøk i dag?',
+  'Harry Potter ble avvist av tolv forlag før ett sa ja. Et nei gjelder tilbudet, ikke deg.',
+  'Michael Jordan kom ikke med på førstelaget på skolen som 15-åring. Året etter var han der.',
+  'Se for deg målet ditt som nådd. Gjør så det ene som fører dit i dag.',
+  'Du trenger ikke lyst. Du trenger bare å begynne. Lysten kommer etter de første fem minuttene.',
+  'Den du er om et år, bygges av det du gjør i dag. Ikke av det du planlegger.',
+  'Disiplin er å velge det du vil mest, framfor det du vil akkurat nå.'
+];
+const LOCK='<svg class="lk" viewBox="0 0 12 12" aria-label="Kjerneoppgave"><path d="M3.5 5V3.8a2.5 2.5 0 0 1 5 0V5" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="2" y="5" width="8" height="6" rx="1.5" fill="currentColor"/></svg>';
+
+let S={v:1,done:{},bought:[],goals:{},shifts:{},cfg:{},start:null};
+let UID=null,dirty=false,ready=false,syncErr='',syncedAt=null,sel=null,tab='today',cur=null;
+const P={supported:false,perm:'default',sub:false,st:null,err:''};
+const cfg=()=>Object.assign({work:false,book:'',breakfast:'',prep:'',prepFor:{},gym:{},events:{},goals:[],goalBy:'Målene dine',goalNote:'',callGoal:0,water:'Vann 3 liter',store:'',screenMax:120,shiftName:'Vakt',shiftNudge:['Vakt i dag','Ingen småkjøp på jobb. Streaken din ligger i potten.'],buySub:'Ingen kjøp du ikke har planlagt'},S.cfg||{});
+function norm(){S.v=1;S.done=S.done||{};S.bought=S.bought||[];S.goals=S.goals||{};S.shifts=S.shifts||{};S.cfg=S.cfg||{}}
+
+/* ---------- dagens plan ---------- */
+function plan(d){
+  const c=cfg(),k=key(d),w=d.getDay(),sh=S.shifts[k],ev=c.events[k],work=c.work&&w>=1&&w<=5;
+  const a=sh?mins(sh[0]):null,b=sh?mins(sh[1]):null,early=!!sh&&a<=570,late=!!sh&&b>=1320;
+  const wake=early?Math.min(480,a-45):480;
+  const nx=S.shifts[key(addDays(d,1))],na=nx?mins(nx[0]):null,wakeN=nx&&na<=570?Math.min(480,na-45):480;
+  const bedT=Math.min(1410,wakeN+930);
+  const e=late?[b+10,b+20,b+40,b+45]:[bedT-150,bedT-120,bedT-60,bedT];
+  const R=S.bought.filter(x=>x.day==k).map(x=>x.id),has=id=>R.includes(id);
+  const bk=c.book||'Boka di',T=[];
+  const add=(g,t,id,title,sub,cn,o)=>T.push(Object.assign({g,t,id,title,sub,c:cn},o));
+  add('Morgen',wake,'wake','Oppe kl. '+hm(wake),'Kan bare krysses av til '+hm(wake+10),15,{core:1});
+  add('Morgen',wake+10,'food',w&&c.breakfast?'Frokost: '+c.breakfast:'Frokost',c.breakfast?(w?'Premeal fra kjøleskapet':'Søndag lager du den fersk'):'Før du åpner telefonen',5);
+  if(!early)add('Morgen',wake+15,'read','Les 30 min',bk+', før du åpner telefonen',10,{core:1,note:'Hva tok du med deg fra lesingen?'});
+  if(ev)add('Dag',mins(ev.t),'ev',ev.title,ev.sub||'',20,{note:'Hva lærte du, og hva er neste steg?'});
+  if(work&&!ev&&!early){const x=sh?Math.min(660,a-90):660;if(x-540>=45)add('Dag',540,'ring1','Ringeblokk 09.00–'+hm(x),'Første samtale er den tyngste. Ta den først.',20,{num:'Antall samtaler',unit:'samtaler'})}
+  if(work&&!(sh&&a<1020&&b>960))add('Dag',960,'ring2','Ringeblokk 16.00–17.00','All ringing ferdig innen 19.30',early?20:10,{num:'Antall samtaler',unit:'samtaler'});
+  if(sh)add('Dag',a,'shift',c.shiftName+' '+hm(a)+'–'+hm(b),[sh[2],w==6?'Teller som cardio.':''].filter(Boolean).join('. '),10);
+  const g=c.gym[w],gt=!sh||a>=900?720:(early&&work?1035:b+30);
+  if(g)add('Dag',gt,'gym','Trening: '+g[0],g[1],15);
+  if(w==6&&!sh&&Object.keys(c.gym).length)add('Dag',660,'gym','Cardio: gåtur 45 min','Rask gange',15);
+  if(!has('walk')){
+    if(w==0||w==4)add('Dag',null,'walk','Tur 30–60 min','Ukas lange tur. Uten telefon i hånda.',15);
+    else if(w!=6)add('Dag',null,'walk','Tur 10 min','Kort luftetur. Uten telefon i hånda.',10);
+  }
+  if(c.prep&&c.prepFor[w])add('Dag',null,'prep','Lag premeals',c.prep+', til '+c.prepFor[w],10);
+  add('Dag',null,'water',c.water,'Seks glass på en halv liter',5);
+  if(early)add('Kveld',Math.min(1140,e[0]-60),'read','Les 30 min',bk,10,{core:1,note:'Hva tok du med deg fra lesingen?'});
+  const mx=c.screenMax+(has('phone')?30:0);
+  if(!has('junk'))add('Kveld',e[0],'buy','Ingen småkjøp i dag',c.buySub,15,{core:1});
+  add('Kveld',e[0],'screen','Sosiale medier under '+(mx%60?mx+' min':mx/60+' timer'),'Sjekk Skjermtid og skriv inn tallet',15,{core:1,num:'Minutter på TikTok, Insta og Snap',unit:'min',max:mx});
+  if(!has('calm'))add('Kveld',e[1],'log','Kveldslogg','Tre linjer om dagen, og frosken for i morgen',10,{note:'Hva gikk bra, hva gjør du bedre, og hva er frosken i morgen?'});
+  add('Kveld',e[2],'phone','Telefon vekk kl. '+hm(e[2]),'Laderen står utenfor rekkevidde fra senga',10,{core:1});
+  add('Kveld',e[3],'bed','Les 30 min i senga',late?'Så rett i søvn. Kryss av i morgen tidlig.':'I seng kl. '+hm(e[3])+', lyset av kl. '+hm(e[3]+30)+'. Kryss av i morgen tidlig.',10,{core:1,grace:1});
+  const f=['ev','ring1','ring2','read'].find(i=>T.some(t=>t.id==i));
+  T.find(t=>t.id==f).frog=1;
+  T.sort((x,y)=>(x.t==null?1e4:x.t)-(y.t==null?1e4:y.t));
+  return T;
+}
+/* status for én oppgave: done, miss (over grensa), missed (ikke gjort), open, future, off */
+function stat(k,t){
+  const x=(S.done[k]||{})[t.id];if(x)return x.miss?'miss':'done';
+  if(!S.start||k<S.start)return 'off';
+  const tk=key(today());
+  if(k>tk)return 'future';
+  if(k<tk)return t.grace&&k==key(addDays(today(),-1))&&nowMin()<720?'open':'missed';
+  if(t.id=='wake'&&nowMin()>t.t+10)return 'missed';
+  return 'open';
+}
+const dayIdx=k=>Math.round((parse(k)-parse(S.start))/864e5);
+const pen=(k,t,s)=>s=='miss'||(s=='missed'&&t.core)?Math.round(t.c/2):(s=='missed'&&dayIdx(k)>=14?Math.round(t.c/4):0);
+function ledger(){
+  const L={bal:0,xp:0,streak:0,passes:0,days:{}};if(!S.start)return L;
+  const tk=key(today());let d=parse(S.start),s=0,passes=0;
+  for(let i=0;i<1500&&key(d)<=tk;i++,d=addDays(d,1)){
+    const k=key(d),T=plan(d),dn=S.done[k]||{};let pos=0,pn=0,open=false,left=0;
+    T.forEach(t=>{const st=stat(k,t);if(st=='done')pos+=t.c+(dn[t.id].bonus||0);else{if(t.core)left++;if(st=='open')open=true;pn+=pen(k,t,st)}});
+    const locked=left==0;if(locked)pos+=20;
+    const mult=s>=14?1.5:s>=7?1.25:s>=3?1.1:1,gain=Math.round(pos*mult);
+    const mine=S.bought.filter(x=>x.day==k);passes+=mine.filter(x=>x.id=='pass').length;
+    L.xp+=gain;L.bal=Math.max(0,L.bal+gain-mine.reduce((n,x)=>n+x.price,0)-pn);
+    L.days[k]={gain,pn,locked,mult,left,tot:T.reduce((n,t)=>n+t.c,0)+20};
+    if(locked)s++;else if(k<tk&&!open){if(passes>0)passes--;else s=0}
+  }
+  L.streak=s;L.passes=passes;return L;
+}
+function level(x){let i=0;LEVELS.forEach((l,j)=>{if(x>=l[0])i=j});const nx=LEVELS[i+1];return{name:LEVELS[i][1],x,next:nx?nx[0]:null,nextName:nx?nx[1]:null,pct:nx?(x-LEVELS[i][0])/(nx[0]-LEVELS[i][0])*100:100}}
+const fact=d=>FACTS[(d.getDate()+d.getMonth()*3)%FACTS.length];
+
+/* ---------- varsler: hva som skal sendes når ---------- */
+function notifs(d){
+  const c=cfg(),T=plan(d),sh=S.shifts[key(d)],g=id=>T.find(t=>t.id==id),N=[],wk=g('wake').t,rd=g('read'),f=T.find(t=>t.frog),ph=g('phone'),lateShift=sh&&mins(sh[1])>=1320;
+  N.push({at:wk,kind:'wake',task:'wake',title:'Opp. Klokka er '+hm(wk)+'.',body:'Kryss av innen '+hm(wk+10)+'. 15 coins står på spill.'});
+  if(rd.t<720)N.push({at:rd.t,kind:'read',task:'read',title:'Bok før telefon',body:'30 min lesing. Insta kan vente.'});
+  else N.push({at:rd.t-15,kind:'read',task:'read',title:'Tid for boka',body:'30 min lesing. Legg telefonen i et annet rom.'});
+  if(f.id!='read')N.push({at:f.t-5,kind:'frog',task:f.id,title:'Frosken venter',body:f.title+' om 5 min. Gjør den før alt annet.'});
+  if(sh)N.push({at:mins(sh[0])-20,kind:'shift',title:c.shiftNudge[0],body:c.shiftNudge[1]});
+  else N.push({at:780,kind:'fact',title:'Til deg i dag',body:fact(d)});
+  N.push({at:lateShift?mins(sh[1])+10:ph.t-90,kind:'lock',title:'Lås dagen',body:'Se hva som gjenstår. Skriv kveldsloggen før du legger deg.',meta:{core:T.filter(t=>t.core&&!t.grace).map(t=>[t.id,t.c])}});
+  N.push({at:ph.t-15,kind:'phone',task:'phone',title:'Telefon vekk om 15 min',body:'Boka ligger ved senga.'});
+  return N.sort((x,y)=>x.at-y.at).slice(0,6);
+}
+function schedule(){
+  const rows=[],t0=today(),now=Date.now();if(!S.start)return rows;
+  for(let i=0;i<14;i++){const d=addDays(t0,i),k=key(d);if(k<S.start)continue;
+    notifs(d).forEach(n=>{const at=d.getTime()+n.at*6e4;if(at>now+3e4)rows.push({send_at:new Date(at).toISOString(),day:k,task:n.task||null,kind:n.kind,title:n.title,body:n.body,meta:n.meta||null})})}
+  return rows;
+}
+
+/* ---------- lagring ---------- */
+async function api(fn,args){
+  const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({fn,args:Object.assign({p_uid:UID},args||{})})});
+  const j=await r.json().catch(()=>({error:'ugyldig svar fra serveren ('+r.status+')'}));
+  if(!r.ok||j.error)throw new Error(j.error||'serverfeil '+r.status);
+  return j.data;
+}
+function persist(){try{localStorage.setItem(LSK,JSON.stringify({S,dirty}))}catch(e){syncErr='Telefonen nekter å lagre lokalt'}}
+let saveT,syncing=false;
+function save(){dirty=true;persist();clearTimeout(saveT);saveT=setTimeout(sync,1200)}
+async function sync(){
+  if(syncing||!ready)return;syncing=true;
+  try{
+    const snap=JSON.stringify(S);
+    await api('save_state',{p_state:JSON.parse(snap)});
+    await api('set_schedule',{p_rows:schedule()});
+    syncedAt=new Date();
+    if(JSON.stringify(S)==snap){dirty=false;persist()}else{clearTimeout(saveT);saveT=setTimeout(sync,800)}
+    if(syncErr){syncErr='';render()}
+  }catch(e){syncErr=e.message;render();clearTimeout(saveT);saveT=setTimeout(sync,15000)}
+  finally{syncing=false}
+}
+async function load(){
+  try{
+    const r=await api('get_state');
+    if(!(dirty&&S.start)&&r.state&&r.state.v)S=r.state;
+    norm();ready=true;syncErr='';syncedAt=new Date();
+    if(!S.start){const sm=cfg().startMin,tk=key(today());S.start=sm&&sm>tk?sm:tk;sel=null;save()}
+    else if(dirty)sync();
+    else{persist();api('set_schedule',{p_rows:schedule()}).catch(e=>{syncErr=e.message;render()})}
+  }catch(e){syncErr=e.message;setTimeout(load,15000)}
+  render();
+}
+
+/* ---------- varsler: telefonen ---------- */
+const b64ToU8=s=>{s=s.replace(/-/g,'+').replace(/_/g,'/');s+='='.repeat((4-s.length%4)%4);return Uint8Array.from(atob(s),c=>c.charCodeAt(0))};
+async function saveSub(sub){const j=sub.toJSON();await api('save_sub',{p_endpoint:j.endpoint,p_p256dh:j.keys.p256dh,p_auth:j.keys.auth})}
+async function pushStatus(){try{P.st=await api('push_status')}catch(e){P.st=null}}
+async function pushInit(){
+  P.supported='serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+  if(!P.supported||!ready)return;
+  P.perm=Notification.permission;
+  try{
+    const reg=await navigator.serviceWorker.ready;
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub&&P.perm=='granted')sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(VAPID)});
+    if(sub){await saveSub(sub);P.sub=true;P.err=''}else P.sub=false;
+  }catch(e){P.err='Varsler feilet: '+e.message}
+  await pushStatus();
+}
+async function pushOn(){
+  try{
+    P.perm=await Notification.requestPermission();
+    if(P.perm=='granted'){
+      const reg=await navigator.serviceWorker.ready;
+      const sub=await reg.pushManager.getSubscription()||await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64ToU8(VAPID)});
+      await saveSub(sub);P.sub=true;P.err='';toast('Varsler er på');await pushStatus();
+    }
+  }catch(e){P.err='Kunne ikke slå på varsler: '+e.message}
+  render();
+}
+async function pushTest(){
+  try{await api('test_push');toast('Testvarsel sendt. Det kommer innen ett minutt.');setTimeout(()=>pushStatus().then(render),75000)}
+  catch(e){P.err='Testvarsel feilet: '+e.message;render()}
+}
+function alerts(){
+  const A=[],st=P.st;
+  if(syncErr)A.push(['','Ikke lagret til skyen: '+esc(syncErr)+'. Prøver igjen.']);
+  if(P.err)A.push(['',esc(P.err)]);
+  if(ready&&P.supported){
+    if(P.perm=='denied')A.push(['','Varsler er blokkert. Slå dem på i Innstillinger, Varslinger, Lock In.']);
+    else if(!P.sub)A.push(['info','Varsler er ikke slått på.','<button class="btn sm" data-act="push">Slå på varsler</button>']);
+  }
+  if(st){
+    if(st.failed>0)A.push(['',st.failed+' varsler feilet siste døgn. Siste feil: '+esc(st.last_error||'ukjent')]);
+    if(st.overdue>0||new Date(st.now)-new Date(st.heartbeat)>5*6e4)A.push(['','Varslene henger på serveren. Gi beskjed til Claude.']);
+  }
+  return A.map(a=>`<div class="alert ${a[0]}"><span>${a[1]}</span>${a[2]||''}</div>`).join('');
+}
+
+/* ---------- skjermbilder ---------- */
+function dial(T,k,locked){
+  const r=52,C=2*Math.PI*r,tot=T.reduce((a,t)=>a+t.c,0);let off=0,s='';
+  T.forEach(t=>{const len=t.c/tot*C,st=stat(k,t),cl=st=='done'?'on':(st=='miss'||st=='missed')?'miss':(t.core?'core':'');
+    s+=`<circle class="seg ${cl}" r="${r}" cx="66" cy="66" stroke-dasharray="${(len-4).toFixed(1)} ${(C-len+4).toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}"/>`;off+=len});
+  return `<svg class="dial${locked?' locked':''}" id="dial" viewBox="0 0 132 132" role="img" aria-label="${locked?'Dagen er låst':'Dagen er åpen'}"><g transform="rotate(-90 66 66)">${s}</g><path class="shackle" d="M56 64v-8a10 10 0 0 1 20 0v8"/><rect class="lbody" x="49" y="64" width="34" height="27" rx="7"/><circle class="hole" cx="66" cy="77.5" r="3.2"/></svg>`;
+}
+function vToday(L){
+  const c=cfg(),d=sel,k=key(d),tk=key(today()),w=d.getDay(),T=plan(d),dn=S.done[k]||{},sh=S.shifts[k],D=L.days[k];
+  const left=T.filter(t=>t.core&&stat(k,t)!='done').length,locked=left==0,tot=T.reduce((a,t)=>a+t.c,0)+20;
+  const g=c.gym[w],sum=[g?g[0]:(w==6&&Object.keys(c.gym).length?'Cardio':'Treningsfri dag'),sh?c.shiftName+' '+hm(mins(sh[0]))+'–'+hm(mins(sh[1])):'Ingen vakt'].join('. ')+'.';
+  const cls=s=>s=='done'?' done':(s=='miss'||s=='missed')?' miss':(s=='open'?'':' dim');
+  const val=(t,s)=>{const x=dn[t.id];if(s=='done')return '+'+(t.c+(x.bonus||0));if(s=='miss'||s=='missed'){const p=pen(k,t,s);return p?'−'+p:'0'}return '+'+t.c};
+  const sub=t=>{const x=dn[t.id];return x&&x.note?'«'+esc(x.note)+'»':esc(t.sub)};
+  const row=t=>{const s=stat(k,t);return `<button class="row${cls(s)}" data-task="${t.id}"><span class="t">${t.t==null?'Fleks':hm(t.t)}</span><span><span class="ti">${t.core?LOCK:''}${esc(t.title)}</span><span class="su">${sub(t)}</span></span><span class="c">${val(t,s)}</span><span class="ck"></span></button>`};
+  let head,body;
+  if(!S.start||k>tk||k<S.start){head='Ikke startet ennå';body=S.start&&S.start>tk?'Første dag er '+long(parse(S.start))+'.':'Du kan krysse av når dagen kommer.'}
+  else if(k==tk){head=locked?'Dagen er låst':'Dagen er åpen';body=locked?'Alle kjerneoppgaver er gjort. Du fikk 20 coins ekstra.':left+(left==1?' kjerneoppgave':' kjerneoppgaver')+' igjen før den låses.'}
+  else{head=locked?'Dagen ble låst':'Dagen ble ikke låst';body=D&&D.pn?'Du mistet '+D.pn+' coins.':'Ingen coins tapt.'}
+  const line=D?D.gain+' av '+tot+' coins'+(D.mult>1?', streak gir '+Math.round((D.mult-1)*100)+' % ekstra':''):tot+' coins mulig';
+  const f=T.find(t=>t.frog),fs=stat(k,f);
+  let h=alerts()+`<h1>${cap(long(d))}</h1><p class="sum">${esc(sum)}</p>
+  <section class="hero">${dial(T,k,locked)}<div><h2>${head}</h2><p>${body}</p><p class="today">${line}</p><p>Streak: ${L.streak} ${L.streak==1?'dag':'dager'}</p></div></section>`;
+  if(k==tk&&S.start){const y=addDays(today(),-1),yk=key(y);if(yk>=S.start){const bt=plan(y).find(t=>t.grace);if(bt&&stat(yk,bt)=='open')h+=`<div class="ask"><p>Leste du 30 min i senga i går?</p><div><button class="btn sm" data-grace="yes">Ja, gi meg ${bt.c} coins</button><button class="btn sm ghost" data-grace="no">Nei</button></div></div>`}}
+  h+=`<button class="frog${cls(fs)}" data-task="${f.id}"><small>${fs=='done'?'Frosken er tatt.':(fs=='miss'||fs=='missed')?'Frosken ble ikke tatt.':'Frosken. Gjør denne før alt annet.'}</small><span class="ti">${esc(f.title)}</span><span class="su">${sub(f)}</span><span class="c">${val(f,fs)}</span></button>`;
+  ['Morgen','Dag','Kveld'].forEach(gr=>{const l=T.filter(t=>t.g==gr&&!t.frog);if(l.length)h+=`<h3 class="grp">${gr}</h3>`+l.map(row).join('')});
+  return h+`<p class="note">${fact(d)}</p>`;
+}
+function vShifts(){
+  const c=cfg(),tk=key(today()),l=Object.keys(S.shifts).filter(k=>k>=tk).sort();
+  return alerts()+`<h1>Vakter</h1><p class="lead">Planen for dagen bygges rundt vakta. Tidlig vakt flytter vekking og lesing, og kvelden før blir kortere. Sen vakt flytter kvelden.</p>
+  <div class="box"><h3>Legg til vakt</h3><p class="su">Velg dato, og trykk på tiden.</p>
+  <label for="sd">Dato</label><input type="date" id="sd" value="${key(addDays(today(),1))}">
+  <div class="chips">${PRESETS.map((p,i)=>`<button class="chip" data-preset="${i}">${hm(mins(p[0]))}–${hm(mins(p[1]))}</button>`).join('')}</div></div>
+  ${l.length?l.map(k=>{const s=S.shifts[k];return `<div class="item"><span class="ti">${cap(long(parse(k)))}</span><span class="su">${hm(mins(s[0]))}–${hm(mins(s[1]))}${s[2]?', '+esc(s[2]):''}</span><button class="btn sm ghost act" data-del="${k}">Fjern</button></div>`}).join(''):'<p class="lead">Ingen vakter lagt inn. Legg til den første over.</p>'}`;
+}
+const weekOf=k=>{const d=parse(k);return key(addDays(d,-((d.getDay()+6)%7)))};
+function capUsed(r){
+  const tk=key(today());
+  if(r[4]=='day')return S.bought.some(x=>x.id==r[0]&&x.day==tk)?'Brukt i dag':'';
+  if(r[4]=='week')return S.bought.some(x=>x.id==r[0]&&weekOf(x.day)==weekOf(tk))?'Brukt denne uka':'';
+  return '';
+}
+function vRewards(L){
+  const c=L.bal,started=S.start&&S.start<=key(today());
+  return alerts()+`<h1>Belønninger</h1><p class="lead">Du har ${c} coins. En god dag gir rundt 170.${L.passes?' Du har '+L.passes+' fripass liggende.':''}</p>
+  ${REWARDS.map((r,i)=>{const u=capUsed(r),no=!started||u||c<r[3];return `<div class="item"><span class="ti">${r[1]}</span><span class="su">${r[2]}</span><button class="btn sm act" data-buy="${i}" ${no?'disabled':''}>${!started?'Ikke startet':u?u:c<r[3]?'Mangler '+(r[3]-c):'Kjøp for '+r[3]}</button></div>`}).join('')}
+  ${S.bought.length?'<h3 class="grp">Kjøpt</h3>'+S.bought.slice(-10).reverse().map(x=>`<div class="item"><span class="ti">${esc(x.name)}</span><span class="su">${cap(long(parse(x.day)))}, ${x.price} coins</span></div>`).join(''):''}`;
+}
+function weekCalls(){
+  let m=parse(weekOf(key(today()))),n=0;
+  for(let i=0;i<7;i++,m=addDays(m,1)){const dn=S.done[key(m)]||{};['ring1','ring2'].forEach(id=>{if(dn[id])n+=dn[id].num||0})}
+  return n;
+}
+function vMe(L){
+  const c=cfg(),l=level(L.xp),st=P.st;
+  let pushBox='<div class="box"><h3>Varsler</h3>';
+  if(!P.supported)pushBox+='<p class="su">Denne nettleseren kan ikke ta imot varsler. På iPhone må appen åpnes fra Hjem-skjermen.</p>';
+  else if(P.perm=='denied')pushBox+='<p class="bad-text">Varsler er blokkert. Slå dem på i Innstillinger, Varslinger, Lock In.</p>';
+  else if(!P.sub)pushBox+='<p class="su">Varsler er av. Uten dem får du ingen påminnelser.</p><button class="btn" data-act="push">Slå på varsler</button>';
+  else pushBox+=`<p class="su">Varsler er på.${st&&st.next?' Neste kommer '+clock(st.next)+'.':''}${st&&st.last_sent?' Sist sendt '+clock(st.last_sent)+'.':''}</p>${st&&st.failed>0?'<p class="bad-text">'+st.failed+' feilet siste døgn: '+esc(st.last_error||'')+'</p>':''}<button class="btn ghost" data-act="test">Send testvarsel</button>`;
+  pushBox+='</div>';
+  return alerts()+`<h1>Meg</h1><p class="lead">Nivået ditt går aldri ned. Det er beviset på det du har gjort.</p>
+  <div class="box"><h3>${l.name}</h3><div class="meter"><i style="width:${l.pct}%"></i></div><p class="su">${l.next?l.x+' av '+l.next+' poeng til «'+l.nextName+'»':'Høyeste nivå'}</p></div>
+  ${c.callGoal?`<div class="box"><h3>Samtaler denne uka</h3><div class="meter"><i style="width:${Math.min(100,weekCalls()/c.callGoal*100)}%"></i></div><p class="su">${weekCalls()} av ${c.callGoal}. Tallet kommer fra ringeblokkene du krysser av.</p></div>`:''}
+  ${c.goals.length?`<div class="box"><h3>${esc(c.goalBy)}</h3>${c.goals.map(g=>`<div class="item"><span class="ti">${esc(g.name)}</span><span class="su">Mål: ${g.target}</span><span class="step act"><button data-goal="${g.id}" data-by="-1" aria-label="Én færre">−</button><b>${S.goals[g.id]||0} av ${g.target}</b><button data-goal="${g.id}" data-by="1" aria-label="Én til">+</button></span></div>`).join('')}${c.goalNote?'<p class="su" style="margin-top:10px">'+esc(c.goalNote)+'</p>':''}</div>`:''}
+  ${pushBox}
+  <div class="box"><h3>Varslene ${key(sel)==key(today())?'i dag':DAYS[sel.getDay()]}</h3><p class="su">Maks seks om dagen. Oppgaver du alt har krysset av, får du ikke varsel om.</p>
+    ${notifs(sel).map(n=>`<div class="push"><b>${esc(n.title)}</b><time>${hm(n.at)}</time><p>${esc(n.body)}</p></div>`).join('')}</div>
+  <div class="box"><h3>Reglene</h3><ul class="rules">
+    <li>Kjerneoppgaver har en lås foran navnet. Glemmer du én, mister du halve verdien.</li>
+    <li>Andre oppgaver koster ingenting å glemme de første 14 dagene. Etter det mister du en fjerdedel.</li>
+    <li>Alle kjerneoppgaver gjort låser dagen og gir 20 coins ekstra.</li>
+    <li>Streak på 3 dager gir 10 % ekstra. 7 dager gir 25 %. 14 dager gir 50 %.</li>
+    <li>Å stå opp kan bare krysses av til ti minutter etter vekketid.</li>
+    <li>Dagen stenger kl. 03.00. Lesing i senga kan krysses av til kl. 12.00 dagen etter.</li>
+    <li>Coins går aldri under null.</li></ul></div>
+  <p class="lead">${syncErr?'Ikke lagret til skyen ennå.':syncedAt?'Lagret i skyen kl. '+pad(syncedAt.getHours())+'.'+pad(syncedAt.getMinutes())+'.':'Kobler til skyen.'}</p>`;
+}
+function vInstall(){
+  return `<h1>Legg Lock In på Hjem-skjermen</h1><p class="lead">Appen og varslene virker bare når den åpnes fra Hjem-skjermen.</p>
+  <div class="box"><ol class="rules"><li>Trykk på Del-knappen nederst i Safari. Det er firkanten med pil opp.</li><li>Bla ned og velg «Legg til på Hjem-skjerm».</li><li>Trykk «Legg til».</li><li>Åpne Lock In fra Hjem-skjermen.</li></ol></div>`;
+}
+
+const TABS=[['today','I dag','<circle cx="12" cy="12" r="9"/><path d="M8 12.5l2.7 2.7L16 9.5"/>'],['shifts','Vakter','<rect x="3.5" y="5" width="17" height="15" rx="3"/><path d="M3.5 10h17M8 3v4M16 3v4"/>'],['rewards','Belønninger','<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4.5"/>'],['me','Meg','<circle cx="12" cy="8.5" r="4"/><path d="M4.5 20c1.2-3.6 4-5.2 7.5-5.2s6.3 1.6 7.5 5.2"/>']];
+function render(){
+  if(!UID)return;
+  const t0=today(),tk=key(t0),L=ledger();
+  if(!sel)sel=S.start&&S.start>tk?parse(S.start):t0;
+  $('#purse').textContent=L.bal;
+  let first=addDays(t0,-3);if(S.start&&key(first)<S.start)first=parse(S.start);if(!S.start)first=t0;
+  let s='';for(let i=0;i<14;i++){const d=addDays(first,i),k=key(d),D=L.days[k];
+    s+=`<button class="d${k==key(sel)?' sel':''}${k==tk?' now':''}${S.shifts[k]?' shift':''}${D&&D.locked?' lck':''}${D&&!D.locked&&k<tk?' bad':''}" data-day="${k}" aria-label="${long(d)}${S.shifts[k]?', vakt':''}"><span>${k==tk?'i dag':DS[d.getDay()]}</span><b>${d.getDate()}</b><i></i></button>`}
+  $('#strip').innerHTML=s;
+  $('#view').innerHTML={today:vToday,shifts:vShifts,rewards:vRewards,me:vMe}[tab](L);
+  $('#tabs').innerHTML=TABS.map(t=>`<button data-tab="${t[0]}" ${tab==t[0]?'aria-current="page"':''}><svg viewBox="0 0 24 24">${t[2]}</svg>${t[1]}</button>`).join('');
+}
+let tt;function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(tt);tt=setTimeout(()=>t.classList.remove('on'),3000)}
+function openTask(id){
+  const k=key(sel),t=plan(sel).find(x=>x.id==id),x=(S.done[k]||{})[id],s=stat(k,t);cur=t;
+  let h=`<h2>${esc(t.title)}</h2><p class="su">${esc(t.sub)}</p>`;
+  if(x){
+    if(x.num!=null)h+=`<p class="said">${x.num} ${t.unit||''}</p>`;
+    if(x.note)h+=`<p class="said">«${esc(x.note)}»</p>`;
+    if(x.miss)h+=`<p class="err">Over grensa. Du mistet ${pen(k,t,'miss')} coins.</p>`;
+    h+=k==key(today())&&t.id!='wake'?`<button class="btn ghost" data-act="undo">Angre</button>`:`<button class="btn ghost" data-act="close">Lukk</button>`;
+  }else if(s=='open'){
+    if(t.num)h+=`<label for="num">${t.num}</label><input id="num" type="number" inputmode="numeric" min="0">`;
+    h+=`<label for="nt">${t.note||'Notat, valgfritt. Gir 2 coins ekstra.'}</label><textarea id="nt" rows="3" placeholder="Én til to setninger"></textarea>
+    <p class="err" id="err"></p><button class="btn" data-act="ok">Fullfør og få ${t.c} coins</button>`;
+  }else if(s=='missed'){
+    const p=pen(k,t,s);
+    h+=`<p class="err">${t.id=='wake'&&k==key(today())?'For sent. Fristen var '+hm(t.t+10)+'.':'Ikke gjort.'} ${p?'Du mistet '+p+' coins.':'Ingen straff de første 14 dagene.'}</p><button class="btn ghost" data-act="close">Lukk</button>`;
+  }else h+=`<p class="said">Kan krysses av når dagen kommer.</p><button class="btn ghost" data-act="close">Lukk</button>`;
+  $('#sheet').innerHTML=h;document.body.classList.add('open');
+}
+const closeSheet=()=>document.body.classList.remove('open');
+function finish(){
+  const t=cur,k=key(sel);
+  if(stat(k,t)!='open'){closeSheet();render();toast('Fristen har gått ut');return}
+  const nt=($('#nt').value||'').trim(),ne=$('#num'),x={at:Date.now()};
+  if(t.num){if(ne.value===''||+ne.value<0){$('#err').textContent='Skriv inn et tall.';return}x.num=+ne.value}
+  if(t.note&&nt.length<12){$('#err').textContent='Skriv minst én setning.';return}
+  if(nt)x.note=nt.slice(0,400);if(!t.note&&nt.length>=12)x.bonus=2;
+  if(t.max!=null&&x.num>t.max)x.miss=1;
+  const was=(ledger().days[k]||{}).locked;(S.done[k]=S.done[k]||{})[t.id]=x;save();
+  const isL=(ledger().days[k]||{}).locked;closeSheet();render();
+  if(isL&&!was){const dl=$('#dial');if(dl)dl.classList.add('snap');toast('Dagen er låst. 20 coins ekstra.')}
+  else toast(x.miss?'Over grensa. Du mistet '+Math.round(t.c/2)+' coins.':'Fullført. +'+(t.c+(x.bonus||0))+' coins');
+}
+document.addEventListener('click',e=>{
+  if(e.target.id=='scrim'){closeSheet();return}
+  const b=e.target.closest('button');if(!b)return;const D=b.dataset,tk=key(today());
+  if(D.day){sel=parse(D.day);render();window.scrollTo(0,0)}
+  else if(D.tab){tab=D.tab;render();window.scrollTo(0,0)}
+  else if(D.task)openTask(D.task);
+  else if(D.act=='ok')finish();
+  else if(D.act=='close')closeSheet();
+  else if(D.act=='undo'){delete S.done[key(sel)][cur.id];save();closeSheet();render();toast('Angret')}
+  else if(D.act=='push')pushOn();
+  else if(D.act=='test')pushTest();
+  else if(D.grace){const y=addDays(today(),-1),yk=key(y),bt=plan(y).find(t=>t.grace);(S.done[yk]=S.done[yk]||{})[bt.id]=D.grace=='yes'?{at:Date.now()}:{at:Date.now(),miss:1};save();render();toast(D.grace=='yes'?'Fullført. +'+bt.c+' coins':'Notert. Les i kveld.')}
+  else if(D.preset){const v=$('#sd').value;if(!v){toast('Velg en dato først');return}const p=PRESETS[D.preset];S.shifts[v]=[p[0],p[1],cfg().store];save();render();toast('Vakt lagt til. Planen er oppdatert.')}
+  else if(D.del){delete S.shifts[D.del];save();render();toast('Vakt fjernet')}
+  else if(D.buy){const r=REWARDS[D.buy];if(ledger().bal>=r[3]&&!capUsed(r)){S.bought.push({id:r[0],name:r[1],price:r[3],day:tk,at:Date.now()});save();render();toast('Kjøpt: '+r[1])}}
+  else if(D.goal){S.goals[D.goal]=Math.max(0,(S.goals[D.goal]||0)+ +D.by);save();render()}
+});
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden||!UID)return;
+  render();
+  if(!ready)return;
+  if(dirty)sync();else api('set_schedule',{p_rows:schedule()}).catch(()=>{});
+  pushInit().then(render);
+});
+setInterval(()=>{if(UID&&!document.hidden&&!document.body.classList.contains('open'))render()},60000);
+
+async function boot(){
+  const ios=/iPhone|iPad|iPod/.test(navigator.userAgent),alone=navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
+  if(ios&&!alone){document.body.classList.add('setup');$('#view').innerHTML=vInstall();return}
+  try{
+    UID=localStorage.getItem(UIDK);
+    if(!UID){UID=crypto.randomUUID();localStorage.setItem(UIDK,UID)}
+    const l=JSON.parse(localStorage.getItem(LSK)||'null');
+    if(l&&l.S){S=l.S;dirty=!!l.dirty;norm()}
+  }catch(e){$('#view').innerHTML='<div class="alert"><span>Appen får ikke lagret på denne telefonen: '+esc(e.message)+'</span></div>';return}
+  render();
+  if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(e=>{P.err='Varseltjenesten startet ikke: '+e.message;render()});
+  await load();
+  pushInit().then(render);
+}
+boot();
+</script>
+</body>
+</html>
