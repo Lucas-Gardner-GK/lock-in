@@ -1,4 +1,4 @@
-const V = 'lockin-v1';
+const V = 'lockin-v2';
 self.addEventListener('install', e => {
   self.skipWaiting();
   e.waitUntil(caches.open(V).then(c => c.addAll(['./', 'manifest.webmanifest', 'icon-192.png'])).catch(() => {}));

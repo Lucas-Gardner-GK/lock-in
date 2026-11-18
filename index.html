@@ -12,6 +12,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Lock In">
 <meta name="theme-color" content="#0C1320">
+<meta name="robots" content="noindex, nofollow">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
@@ -271,6 +272,7 @@ function plan(d){
 function stat(k,t){
   const x=(S.done[k]||{})[t.id];if(x)return x.miss?'miss':'done';
   if(!S.start||k<S.start)return 'off';
+  if(k==S.start&&S.startAt&&t.t!=null&&parse(k).getTime()+(t.t+(t.id=='wake'?10:60))*6e4<S.startAt)return 'off';
   const tk=key(today());
   if(k>tk)return 'future';
   if(k<tk)return t.grace&&k==key(addDays(today(),-1))&&nowMin()<720?'open':'missed';
@@ -284,12 +286,12 @@ function ledger(){
   const tk=key(today());let d=parse(S.start),s=0,passes=0;
   for(let i=0;i<1500&&key(d)<=tk;i++,d=addDays(d,1)){
     const k=key(d),T=plan(d),dn=S.done[k]||{};let pos=0,pn=0,open=false,left=0;
-    T.forEach(t=>{const st=stat(k,t);if(st=='done')pos+=t.c+(dn[t.id].bonus||0);else{if(t.core)left++;if(st=='open')open=true;pn+=pen(k,t,st)}});
+    T.forEach(t=>{const st=stat(k,t);if(st=='done')pos+=t.c+(dn[t.id].bonus||0);else{if(t.core&&st!='off')left++;if(st=='open')open=true;pn+=pen(k,t,st)}});
     const locked=left==0;if(locked)pos+=20;
     const mult=s>=14?1.5:s>=7?1.25:s>=3?1.1:1,gain=Math.round(pos*mult);
     const mine=S.bought.filter(x=>x.day==k);passes+=mine.filter(x=>x.id=='pass').length;
     L.xp+=gain;L.bal=Math.max(0,L.bal+gain-mine.reduce((n,x)=>n+x.price,0)-pn);
-    L.days[k]={gain,pn,locked,mult,left,tot:T.reduce((n,t)=>n+t.c,0)+20};
+    L.days[k]={gain,pn,locked,mult,left,tot:T.filter(t=>stat(k,t)!='off').reduce((n,t)=>n+t.c,0)+20};
     if(locked)s++;else if(k<tk&&!open){if(passes>0)passes--;else s=0}
   }
   L.streak=s;L.passes=passes;return L;
@@ -306,7 +308,7 @@ function notifs(d){
   if(f.id!='read')N.push({at:f.t-5,kind:'frog',task:f.id,title:'Frosken venter',body:f.title+' om 5 min. Gjør den før alt annet.'});
   if(sh)N.push({at:mins(sh[0])-20,kind:'shift',title:c.shiftNudge[0],body:c.shiftNudge[1]});
   else N.push({at:780,kind:'fact',title:'Til deg i dag',body:fact(d)});
-  N.push({at:lateShift?mins(sh[1])+10:ph.t-90,kind:'lock',title:'Lås dagen',body:'Se hva som gjenstår. Skriv kveldsloggen før du legger deg.',meta:{core:T.filter(t=>t.core&&!t.grace).map(t=>[t.id,t.c])}});
+  N.push({at:lateShift?mins(sh[1])+10:ph.t-90,kind:'lock',title:'Lås dagen',body:'Se hva som gjenstår. Skriv kveldsloggen før du legger deg.',meta:{core:T.filter(t=>t.core&&!t.grace&&stat(key(d),t)!='off').map(t=>[t.id,t.c])}});
   N.push({at:ph.t-15,kind:'phone',task:'phone',title:'Telefon vekk om 15 min',body:'Boka ligger ved senga.'});
   return N.sort((x,y)=>x.at-y.at).slice(0,6);
 }
@@ -344,10 +346,13 @@ async function load(){
     const r=await api('get_state');
     if(!(dirty&&S.start)&&r.state&&r.state.v)S=r.state;
     norm();ready=true;syncErr='';syncedAt=new Date();
-    if(!S.start){const sm=cfg().startMin,tk=key(today());S.start=sm&&sm>tk?sm:tk;sel=null;save()}
+    if(!S.start){const sm=cfg().startMin,tk=key(today());S.start=sm&&sm>tk?sm:tk;S.startAt=S.start==tk?Date.now():null;sel=null;save()}
     else if(dirty)sync();
     else{persist();api('set_schedule',{p_rows:schedule()}).catch(e=>{syncErr=e.message;render()})}
-  }catch(e){syncErr=e.message;setTimeout(load,15000)}
+  }catch(e){
+    if(/unknown user|ugyldig id/.test(e.message)){try{localStorage.removeItem(UIDK);localStorage.removeItem(LSK)}catch(_){}UID=null;locked('Denne lenken virker ikke lenger.');return}
+    syncErr=e.message;setTimeout(load,15000)
+  }
   render();
 }
 
@@ -406,7 +411,7 @@ function dial(T,k,locked){
 }
 function vToday(L){
   const c=cfg(),d=sel,k=key(d),tk=key(today()),w=d.getDay(),T=plan(d),dn=S.done[k]||{},sh=S.shifts[k],D=L.days[k];
-  const left=T.filter(t=>t.core&&stat(k,t)!='done').length,locked=left==0,tot=T.reduce((a,t)=>a+t.c,0)+20;
+  const left=T.filter(t=>t.core&&!['done','off'].includes(stat(k,t))).length,locked=left==0,tot=T.filter(t=>stat(k,t)!='off').reduce((a,t)=>a+t.c,0)+20;
   const g=c.gym[w],sum=[g?g[0]:(w==6&&Object.keys(c.gym).length?'Cardio':'Treningsfri dag'),sh?c.shiftName+' '+hm(mins(sh[0]))+'–'+hm(mins(sh[1])):'Ingen vakt'].join('. ')+'.';
   const cls=s=>s=='done'?' done':(s=='miss'||s=='missed')?' miss':(s=='open'?'':' dim');
   const val=(t,s)=>{const x=dn[t.id];if(s=='done')return '+'+(t.c+(x.bonus||0));if(s=='miss'||s=='missed'){const p=pen(k,t,s);return p?'−'+p:'0'}return '+'+t.c};
@@ -476,6 +481,14 @@ function vMe(L){
     <li>Coins går aldri under null.</li></ul></div>
   <p class="lead">${syncErr?'Ikke lagret til skyen ennå.':syncedAt?'Lagret i skyen kl. '+pad(syncedAt.getHours())+'.'+pad(syncedAt.getMinutes())+'.':'Kobler til skyen.'}</p>`;
 }
+function locked(msg){
+  document.body.classList.add('setup');
+  $('#view').innerHTML=`<h1>Lock In er privat</h1><p class="lead">${msg||'Åpne appen med din personlige lenke.'}</p>
+  <div class="box"><h3>Har du lenken?</h3><p class="su">Lim den inn her. Du trenger bare gjøre det én gang.</p>
+  <label for="lk">Lenken din</label><input id="lk" type="url" autocomplete="off" placeholder="https://…">
+  <p class="err" id="lkerr"></p><button class="btn" data-act="link">Åpne</button></div>`;
+}
+const idFrom=s=>{const m=String(s||'').match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);return m?m[0].toLowerCase():null};
 function vInstall(){
   return `<h1>Legg Lock In på Hjem-skjermen</h1><p class="lead">Appen og varslene virker bare når den åpnes fra Hjem-skjermen.</p>
   <div class="box"><ol class="rules"><li>Trykk på Del-knappen nederst i Safari. Det er firkanten med pil opp.</li><li>Bla ned og velg «Legg til på Hjem-skjerm».</li><li>Trykk «Legg til».</li><li>Åpne Lock In fra Hjem-skjermen.</li></ol></div>`;
@@ -537,6 +550,7 @@ document.addEventListener('click',e=>{
   else if(D.act=='close')closeSheet();
   else if(D.act=='undo'){delete S.done[key(sel)][cur.id];save();closeSheet();render();toast('Angret')}
   else if(D.act=='push')pushOn();
+  else if(D.act=='link'){const id=idFrom($('#lk').value);if(!id){$('#lkerr').textContent='Fant ingen gyldig lenke.';return}try{localStorage.setItem(UIDK,id)}catch(_){}location.replace(location.pathname)}
   else if(D.act=='test')pushTest();
   else if(D.grace){const y=addDays(today(),-1),yk=key(y),bt=plan(y).find(t=>t.grace);(S.done[yk]=S.done[yk]||{})[bt.id]=D.grace=='yes'?{at:Date.now()}:{at:Date.now(),miss:1};save();render();toast(D.grace=='yes'?'Fullført. +'+bt.c+' coins':'Notert. Les i kveld.')}
   else if(D.preset){const v=$('#sd').value;if(!v){toast('Velg en dato først');return}const p=PRESETS[D.preset];S.shifts[v]=[p[0],p[1],cfg().store];save();render();toast('Vakt lagt til. Planen er oppdatert.')}
@@ -555,10 +569,12 @@ setInterval(()=>{if(UID&&!document.hidden&&!document.body.classList.contains('op
 
 async function boot(){
   const ios=/iPhone|iPad|iPod/.test(navigator.userAgent),alone=navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
+  const fromUrl=idFrom(new URLSearchParams(location.search).get('p'))||idFrom(location.hash);
   if(ios&&!alone){document.body.classList.add('setup');$('#view').innerHTML=vInstall();return}
   try{
+    if(fromUrl&&localStorage.getItem(UIDK)!==fromUrl){localStorage.setItem(UIDK,fromUrl);localStorage.removeItem(LSK)}
     UID=localStorage.getItem(UIDK);
-    if(!UID){UID=crypto.randomUUID();localStorage.setItem(UIDK,UID)}
+    if(!UID){locked();return}
     const l=JSON.parse(localStorage.getItem(LSK)||'null');
     if(l&&l.S){S=l.S;dirty=!!l.dirty;norm()}
   }catch(e){$('#view').innerHTML='<div class="alert"><span>Appen får ikke lagret på denne telefonen: '+esc(e.message)+'</span></div>';return}
